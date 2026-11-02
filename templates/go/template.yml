@@ -1,0 +1,78 @@
+# Orbit CI component: go
+# Tests and builds a Go module. See README.md in this folder.
+spec:
+  inputs:
+    image:
+      type: string
+      default: golang
+      description: Image name without a tag. The jobs run in image:go_version.
+    go_version:
+      type: string
+      default: "1.24"
+      description: Image tag, usually the Go version, for example 1.24 or 1.24-alpine.
+    packages:
+      type: string
+      default: ./...
+      description: Packages to test and build, in the form the go command takes them.
+    test_flags:
+      type: string
+      default: ""
+      description: Extra flags for go test, for example -race.
+    test_stage:
+      type: string
+      default: test
+      description: Stage of the test job. The stage must be listed under stages.
+    build_stage:
+      type: string
+      default: build
+      description: Stage of the build job. The stage must be listed under stages.
+    output_dir:
+      type: string
+      default: bin
+      description: Directory for the built binaries. The build job keeps it as an artifact.
+    artifact_expire_in:
+      type: string
+      default: 7 days
+      description: How long Forge keeps the build artifact, for example 2 days.
+    tags:
+      type: array
+      default: []
+      description: Runner tags for both jobs. An empty list matches any runner of the project.
+    cache:
+      type: array
+      default:
+        - key:
+            files:
+              - go.sum
+          paths:
+            - .cache/go-mod/cache/download/
+          policy: pull-push
+      description: Caches for both jobs, as in the cache keyword. Pass an empty list to turn caching off.
+---
+go-test:
+  stage: $[[ inputs.test_stage ]]
+  image: $[[ inputs.image ]]:$[[ inputs.go_version ]]
+  tags: $[[ inputs.tags ]]
+  cache: $[[ inputs.cache ]]
+  script:
+    # The root file system of the job container is read-only. Go keeps its
+    # caches and temporary files in the project directory instead.
+    - 'export GOMODCACHE="$PWD/.cache/go-mod" GOCACHE="$PWD/.cache/go-build" GOTMPDIR="$PWD/.cache/go-tmp"'
+    - 'mkdir -p "$GOMODCACHE" "$GOCACHE" "$GOTMPDIR"'
+    - go version
+    - 'go test $[[ inputs.test_flags ]] $[[ inputs.packages ]]'
+
+go-build:
+  stage: $[[ inputs.build_stage ]]
+  image: $[[ inputs.image ]]:$[[ inputs.go_version ]]
+  tags: $[[ inputs.tags ]]
+  cache: $[[ inputs.cache ]]
+  script:
+    - 'export GOMODCACHE="$PWD/.cache/go-mod" GOCACHE="$PWD/.cache/go-build" GOTMPDIR="$PWD/.cache/go-tmp"'
+    - 'mkdir -p "$GOMODCACHE" "$GOCACHE" "$GOTMPDIR" "$[[ inputs.output_dir ]]"'
+    - go version
+    - 'go build -o "$[[ inputs.output_dir ]]/" $[[ inputs.packages ]]'
+  artifacts:
+    paths:
+      - $[[ inputs.output_dir ]]/
+    expire_in: $[[ inputs.artifact_expire_in ]]

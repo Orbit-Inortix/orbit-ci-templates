@@ -1,0 +1,16 @@
+# Create a Forge release when a tag pipeline succeeds, after the go component
+# has tested and built the module.
+# Replace orbit-ci-templates with the slug of the repository that holds the components.
+# Tag pipelines are opt-in per project. Turn them on before you push a tag.
+stages:
+  - test
+  - build
+  - deploy
+
+include:
+  - component: $CI_SERVER_FQDN/orbit-ci-templates/go@v1.0.0
+  - component: $CI_SERVER_FQDN/orbit-ci-templates/release@v1.0.0
+    inputs:
+      tag_name: $CI_COMMIT_TAG
+      name: "Release $CI_COMMIT_TAG"
+      description: "Built from $CI_COMMIT_SHORT_SHA"

@@ -1,0 +1,82 @@
+# Orbit CI component: node
+# Installs, tests and builds a Node.js project. See README.md in this folder.
+spec:
+  inputs:
+    image:
+      type: string
+      default: node
+      description: Image name without a tag. The jobs run in image:node_version.
+    node_version:
+      type: string
+      default: "22"
+      description: Image tag, usually the Node.js version, for example 22 or 22-alpine.
+    install_command:
+      type: string
+      default: npm ci
+      description: Command that installs the dependencies. Use the package manager of the project.
+    test_command:
+      type: string
+      default: npm test
+      description: Command that runs the tests.
+    build_command:
+      type: string
+      default: npm run build
+      description: Command that builds the project.
+    build_output:
+      type: string
+      default: dist/
+      description: Path that the build creates. The build job keeps it as an artifact.
+    artifact_expire_in:
+      type: string
+      default: 7 days
+      description: How long Forge keeps the build artifact, for example 2 days.
+    test_stage:
+      type: string
+      default: test
+      description: Stage of the test job. The stage must be listed under stages.
+    build_stage:
+      type: string
+      default: build
+      description: Stage of the build job. The stage must be listed under stages.
+    tags:
+      type: array
+      default: []
+      description: Runner tags for both jobs. An empty list matches any runner of the project.
+    cache:
+      type: array
+      default:
+        - key:
+            files:
+              - package-lock.json
+          paths:
+            - .cache/npm/
+          policy: pull-push
+      description: Caches for both jobs, as in the cache keyword. Pass an empty list to turn caching off.
+---
+node-test:
+  stage: $[[ inputs.test_stage ]]
+  image: $[[ inputs.image ]]:$[[ inputs.node_version ]]
+  tags: $[[ inputs.tags ]]
+  cache: $[[ inputs.cache ]]
+  script:
+    # The root file system of the job container is read-only. npm keeps its
+    # cache in the project directory instead.
+    - 'export npm_config_cache="$PWD/.cache/npm"'
+    - node --version
+    - '$[[ inputs.install_command ]]'
+    - '$[[ inputs.test_command ]]'
+
+node-build:
+  stage: $[[ inputs.build_stage ]]
+  image: $[[ inputs.image ]]:$[[ inputs.node_version ]]
+  tags: $[[ inputs.tags ]]
+  cache: $[[ inputs.cache ]]
+  script:
+    - 'export npm_config_cache="$PWD/.cache/npm"'
+    - node --version
+    - '$[[ inputs.install_command ]]'
+    - '$[[ inputs.build_command ]]'
+  artifacts:
+    paths:
+      - $[[ inputs.build_output ]]
+    expire_in: $[[ inputs.artifact_expire_in ]]

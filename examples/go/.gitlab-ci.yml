@@ -1,0 +1,12 @@
+# Test and build a Go module with the go component.
+# Replace orbit-ci-templates with the slug of the repository that holds the components.
+stages:
+  - test
+  - build
+
+include:
+  - component: $CI_SERVER_FQDN/orbit-ci-templates/go@v1.0.0
+    inputs:
+      go_version: "1.24"
+      packages: ./...
+      test_flags: -race

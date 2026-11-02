@@ -1,0 +1,11 @@
+# Install, test and build a Node.js project with the node component.
+# Replace orbit-ci-templates with the slug of the repository that holds the components.
+stages:
+  - test
+  - build
+
+include:
+  - component: $CI_SERVER_FQDN/orbit-ci-templates/node@v1.0.0
+    inputs:
+      node_version: "22"
+      build_output: dist/
